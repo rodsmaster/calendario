@@ -42,38 +42,65 @@ const parseICSClient = (icsText, configInfo) => {
     return events;
 };
 
+const REMOTE_CLOUD_FUNCTION = 'https://us-central1-calendario-65044.cloudfunctions.net/fetchCalendarFeed';
+
 /**
  * Fallback cliente para consumo de ICS quando Cloud Functions não está implantado no ambiente local
  */
 const fetchClientSideFallback = async (cal) => {
     const rawUrl = cal.url
         .replace(/^https:\/\/corsproxy\.io\/\?/, '')
-        .replace(/^https:\/\/api\.allorigins\.win\/raw\?url=/, '');
+        .replace(/^https:\/\/api\.allorigins\.win\/raw\?url=/, '')
+        .replace(/^https:\/\/api\.allorigins\.win\/get\?url=/, '');
 
-    const urlsToTry = [
-        `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`,
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`,
-        rawUrl
-    ];
-
-    for (const url of urlsToTry) {
-        try {
-            const response = await fetch(url);
-            if (response.ok) {
-                const text = await response.text();
-                if (text && text.includes('BEGIN:VCALENDAR')) {
-                    return parseICSClient(text, cal);
+    try {
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(rawUrl)}`);
+        if (response.ok) {
+            const data = await response.json();
+            let text = data.contents || '';
+            if (text.startsWith('data:')) {
+                const base64Str = text.split(',')[1];
+                if (base64Str) {
+                    const binaryString = atob(base64Str);
+                    const bytes = Uint8Array.from(binaryString, c => c.charCodeAt(0));
+                    text = new TextDecoder().decode(bytes);
                 }
             }
-        } catch (e) {
-            // Tenta próxima URL
+            if (text && text.includes('BEGIN:VCALENDAR')) {
+                return parseICSClient(text, cal);
+            }
         }
+    } catch (e) {
+        console.warn(`Fallback cliente falhou para ${cal.nome}`, e);
     }
     return [];
 };
 
+const normalizeDate = (dateVal) => {
+    if (!dateVal) return null;
+    if (typeof dateVal === 'object') {
+        if (typeof dateVal.toMillis === 'function') return new Date(dateVal.toMillis()).toISOString();
+        if (typeof dateVal._seconds === 'number') return new Date(dateVal._seconds * 1000).toISOString();
+        if (typeof dateVal.seconds === 'number') return new Date(dateVal.seconds * 1000).toISOString();
+    }
+    try {
+        return new Date(dateVal).toISOString();
+    } catch (e) {
+        return dateVal;
+    }
+};
+
+const normalizeEvents = (events) => {
+    if (!Array.isArray(events)) return [];
+    return events.map(evt => ({
+        ...evt,
+        start: normalizeDate(evt.start),
+        end: normalizeDate(evt.end)
+    }));
+};
+
 /**
- * Busca calendários externos priorizando a Firebase Cloud Function (/api/calendar)
+ * Busca calendários externos priorizando a Firebase Cloud Function (/api/calendar ou Cloud Function remota)
  */
 export const fetchExternalCalendars = async (activeSources) => {
     let allEvents = [];
@@ -81,23 +108,40 @@ export const fetchExternalCalendars = async (activeSources) => {
         if (!activeSources.includes(cal.id)) continue;
         let eventsFetched = null;
 
-        // 1. Tenta via Cloud Function com cache no Firestore (/api/calendar)
+        const queryParams = `url=${encodeURIComponent(cal.url)}&id=${encodeURIComponent(cal.id)}&name=${encodeURIComponent(cal.nome)}&color=${encodeURIComponent(cal.cor)}`;
+
+        // 1. Tenta via Cloud Function relativa (/api/calendar)
         try {
-            const apiUrl = `/api/calendar?url=${encodeURIComponent(cal.url)}&id=${encodeURIComponent(cal.id)}&name=${encodeURIComponent(cal.nome)}&color=${encodeURIComponent(cal.cor)}`;
-            const response = await fetch(apiUrl);
+            const response = await fetch(`/api/calendar?${queryParams}`);
             if (response.ok) {
                 const data = await response.json();
                 if (data && Array.isArray(data.events)) {
-                    eventsFetched = data.events;
+                    eventsFetched = normalizeEvents(data.events);
                 }
             }
         } catch (e) {
-            console.warn(`Cloud Function /api/calendar indisponível para ${cal.nome}. Usando fallback local.`, e);
+            console.warn(`Cloud Function relativa /api/calendar indisponível para ${cal.nome}.`, e);
         }
 
-        // 2. Fallback local se a Cloud Function não respondeu
+        // 2. Tenta via Cloud Function remota do Firebase se a relativa falhou (ex: ambiente local)
         if (!eventsFetched) {
-            eventsFetched = await fetchClientSideFallback(cal);
+            try {
+                const response = await fetch(`${REMOTE_CLOUD_FUNCTION}?${queryParams}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && Array.isArray(data.events)) {
+                        eventsFetched = normalizeEvents(data.events);
+                    }
+                }
+            } catch (e) {
+                console.warn(`Cloud Function remota indisponível para ${cal.nome}.`, e);
+            }
+        }
+
+        // 3. Fallback cliente local se nenhuma Cloud Function respondeu
+        if (!eventsFetched) {
+            const rawEvents = await fetchClientSideFallback(cal);
+            eventsFetched = normalizeEvents(rawEvents);
         }
 
         if (eventsFetched) {

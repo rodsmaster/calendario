@@ -9,7 +9,12 @@ export const requireAuth = (callback) => {
             if (user) {
                 if (callback) callback(user);
             } else {
-                window.location.href = 'login.html';
+                const demoUser = localStorage.getItem(DEMO_USER_KEY);
+                if (demoUser) {
+                    if (callback) callback(JSON.parse(demoUser));
+                } else {
+                    window.location.href = 'login.html';
+                }
             }
         });
     } else {

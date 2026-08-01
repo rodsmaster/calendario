@@ -23,8 +23,8 @@ function parseICSData(icsText, configInfo = {}) {
             const event = new ICAL.Event(vevent);
             if (!event.startDate) return;
 
-            const startDate = event.startDate.toJSDate();
-            const endDate = event.endDate ? event.endDate.toJSDate() : null;
+            const startDate = event.startDate.toJSDate().toISOString();
+            const endDate = event.endDate ? event.endDate.toJSDate().toISOString() : null;
             const color = configInfo.color || '#2563eb';
 
             events.push({
@@ -73,8 +73,17 @@ exports.fetchCalendarFeed = onRequest({ cors: true }, async (req, res) => {
             const ageMinutes = (now - (cacheData.updatedAt || 0)) / (1000 * 60);
 
             if (ageMinutes < CACHE_TTL_MINUTES && Array.isArray(cacheData.events)) {
+                const normalizedEvents = cacheData.events.map(evt => ({
+                    ...evt,
+                    start: evt.start && typeof evt.start === 'object' && typeof evt.start._seconds === 'number'
+                        ? new Date(evt.start._seconds * 1000).toISOString()
+                        : evt.start,
+                    end: evt.end && typeof evt.end === 'object' && typeof evt.end._seconds === 'number'
+                        ? new Date(evt.end._seconds * 1000).toISOString()
+                        : evt.end
+                }));
                 res.set('X-Cache-Status', 'HIT');
-                return res.json({ events: cacheData.events, cached: true, updatedAt: cacheData.updatedAt });
+                return res.json({ events: normalizedEvents, cached: true, updatedAt: cacheData.updatedAt });
             }
         }
 

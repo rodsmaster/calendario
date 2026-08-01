@@ -10,7 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Se já estiver logado, redireciona para o app
     if (isFirebaseConfigured && auth) {
         onAuthStateChanged(auth, (user) => {
-            if (user) window.location.href = 'calendario.html';
+            if (user || localStorage.getItem('demo_calendar_user')) {
+                window.location.href = 'calendario.html';
+            }
         });
     } else {
         if (localStorage.getItem('demo_calendar_user')) {
