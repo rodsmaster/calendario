@@ -1,9 +1,9 @@
 // Substitua pelas suas credenciais do Firebase Console
 export const firebaseConfig = {
-    apiKey: "AIzaSyDK8eEVqh3Qi8OIi6j2ZL0NXrmxRZkT110",
-    authDomain: "calendario-65044.firebaseapp.com",
-    projectId: "calendario-65044",
-    storageBucket: "calendario-65044.firebasestorage.app",
-    messagingSenderId: "233849968939",
-    appId: "1:233849968939:web:22f0f9c6c888ef0474cd6e"
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_PROJETO.firebaseapp.com",
+    projectId: "SEU_PROJETO",
+    storageBucket: "SEU_PROJETO.appspot.com",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SEU_APP_ID"
 };
