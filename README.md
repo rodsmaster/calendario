@@ -1,4 +1,4 @@
-# 📅 Meu Calendário Web (Firebase Enterprise Edition)
+# 📅 Meu Calendário Web
 
 Calendário web inspirado no Google Calendar, construído com Vanilla JS, HTML5, CSS3, e alimentado por **Firebase Hosting**, **Firebase Authentication**, **Firestore Database** e **Firebase Cloud Functions**.
 
