@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Calendário</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
+    <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-brand">
+                <button id="btn-toggle-sidebar" class="icon-btn"><span class="material-icons">menu</span></button>
+                <span class="material-icons" style="color: var(--primary-color);">calendar_today</span>
+                Meu Calendário
+            </div>
+            <div class="header-actions">
+                <div id="search-container">
+                    <input type="text" id="event-search" placeholder="Pesquisar evento...">
+                </div>
+                <button id="btn-theme" class="icon-btn" title="Alternar Tema"><span class="material-icons">dark_mode</span></button>
+                <button id="btn-logout" class="icon-btn" title="Sair"><span class="material-icons">logout</span></button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <aside class="sidebar" id="sidebar">
+                <button class="btn-primary" id="btn-new-event" style="width: 100%; margin-bottom: 20px;">
+                    + Novo Evento
+                </button>
+                <div class="calendar-list" id="calendar-filters">
+                    <h3>Meus Calendários</h3>
+                    <div class="calendar-item">
+                        <input type="checkbox" id="filter-own" checked>
+                        <span class="color-dot" style="background-color: var(--primary-color);"></span>
+                        <label for="filter-own">Eventos Próprios</label>
+                    </div>
+                    <h3 style="margin-top: 20px;">Outros Calendários</h3>
+                    <div id="external-calendars-list">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+            </aside>
+
+            <main class="calendar-container">
+                <div id="loading-indicator" style="display: none; text-align: center; padding: 10px;">Carregando eventos...</div>
+                <div id="calendar"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Evento -->
+    <div class="modal-overlay" id="event-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Novo Evento</h3>
+                <button class="icon-btn" id="btn-close-modal"><span class="material-icons">close</span></button>
+            </div>
+            <div id="readonly-badge" class="badge-readonly" style="display:none;">🔒 Calendário Externo (Leitura)</div>
+            <form id="event-form">
+                <input type="hidden" id="event-id">
+                <input type="text" id="event-title" placeholder="Título do Evento" required>
+                <input type="datetime-local" id="event-start" required>
+                <input type="datetime-local" id="event-end" required>
+                <textarea id="event-desc" placeholder="Descrição" rows="3"></textarea>
+                <div class="modal-actions">
+                    <button type="button" class="btn-danger" id="btn-delete-event" style="display:none;">Excluir</button>
+                    <button type="submit" class="btn-primary" id="btn-save-event">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script type="module" src="scripts/scripts.js"></script>
+</body>
+</html>
